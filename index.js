@@ -59,11 +59,21 @@ const updateConfig = (config) => {
   return config;
 };
 
+const getNodeVersion = async () => {
+  try {
+    const installedVersion = await exec("node -v");
+    return installedVersion.stdout.replace(/^v/, "").trim();
+  } catch (e) {
+    // node installation cannot be found
+  }
+  // TODO - Support checking package.json's "engines"
+  return "16.16.0";
+};
+
 // TODO - Check current Node.js version or package.json's engine
 const createDockerfile = async () => {
-  const nodeVersion = "16.15";
-  const filename = "bundle.js";
-  const contents = `FROM node:${nodeVersion}-stretch-slim
+  const nodeVersion = await getNodeVersion();
+  const contents = `FROM node:${nodeVersion}-buster-slim
 WORKDIR /opt/
 COPY ${filename} run.js /opt/
 ENTRYPOINT ["node", "./run.js"]`;
