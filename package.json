@@ -1,6 +1,6 @@
 {
   "name": "@inngest/deployx",
-  "version": "0.1.0-beta-1",
+  "version": "0.1.0",
   "description": "Experimental deployment patterns from Inngest",
   "main": "index.js",
   "bin": {

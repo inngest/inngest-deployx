@@ -10,12 +10,13 @@ const unlink = promisify(fs.unlink);
 const exec = promisify(cp.exec);
 
 const DOCKERFILE_NAME = "Dockerfile.inngest";
+const BUNDLE_FILENAME = "bundle.js";
 
 const build = async (filenameOrDir) => {
   // TODO: Add directory support
   const fnFilename = filenameOrDir;
   const entryPoint = path.join(process.cwd(), fnFilename);
-  const output = path.join(process.cwd(), "bundle.js");
+  const output = path.join(process.cwd(), BUNDLE_FILENAME);
 
   return require("esbuild")
     .build({
@@ -75,7 +76,7 @@ const createDockerfile = async () => {
   const nodeVersion = await getNodeVersion();
   const contents = `FROM node:${nodeVersion}-buster-slim
 WORKDIR /opt/
-COPY ${filename} run.js /opt/
+COPY ${BUNDLE_FILENAME} run.js /opt/
 ENTRYPOINT ["node", "./run.js"]`;
   const dockerfileName = path.join(process.cwd(), DOCKERFILE_NAME);
   await writeFile(dockerfileName, contents, "utf-8");
@@ -156,9 +157,9 @@ const cleanup = async (filenames) => {
 
 const main = async () => {
   const { filenameOrDir, flags } = getArgs();
-  const outfile = await build(filenameOrDir);
-  const config = await readConfig(outfile);
-  const dockerfile = await createDockerfile();
+  const bundleFile = await build(filenameOrDir);
+  const config = await readConfig(bundleFile);
+  const dockerFile = await createDockerfile();
   const dockerConfig = updateConfig(config);
   const configFile = await writeConfigFile(dockerConfig);
   const runFile = await writeRunScript();
@@ -172,7 +173,7 @@ const main = async () => {
   }
 
   // Cleanup
-  await cleanup([dockerfile, configFile, runFile]);
+  await cleanup([bundleFile, dockerFile, configFile, runFile]);
 };
 
 main();
