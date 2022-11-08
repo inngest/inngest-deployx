@@ -25,6 +25,7 @@ const build = async (filenameOrDir) => {
       format: "cjs",
       platform: "node",
       outfile: output,
+      target: "es2020", // NOTE - Need to override anything external config for es5 as it requires babel transforms
     })
     .catch((err) => {
       console.log("Failed to bundle Inngest function");
@@ -132,18 +133,29 @@ const getArgs = () => {
 const deploy = async (flags = []) =>
   new Promise(function (resolve, reject) {
     try {
-      const cmd = spawn("npx", ["inngest-cli", "deploy", ...flags]);
+      let output = "";
+      // Use the bin path for backcompat w/ earlier versions of npx
+      const bin = path.join(__dirname, "./node_modules/.bin/inngest");
+      const cmd = spawn(bin, ["deploy", ...flags]);
       cmd.stdout.on("data", (data) => {
         console.log(data.toString());
+        output += data.toString();
       });
       cmd.stderr.on("data", (data) => {
         console.log(data.toString());
+        output += data.toString();
       });
       cmd.on("exit", (code) => {
         if (code === 0) {
           resolve();
         } else {
-          reject(code);
+          if (output.match(/unauthorized: no auth context found/)) {
+            reject(new Error("Please login: npx inngest-cli login"));
+          }
+          if (output.match(/dial unix \/var\/run\/docker.sock/)) {
+            reject(new Error("Please ensure that Docker is running"));
+          }
+          reject(new Error("Please check above output for error"));
         }
       });
     } catch (e) {
@@ -168,7 +180,7 @@ const main = async () => {
     await deploy(flags);
   } catch (e) {
     console.log("Deployment failed!");
-    console.log(e);
+    console.log(e.toString());
     process.exit(1);
   }
 
